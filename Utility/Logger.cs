@@ -14,6 +14,7 @@ namespace DiscordBotTemplateNet7.Utility
         private DiscordChannel _logChannel;
         private DiscordChannel _errorLog;
         private DiscordChannel _joinLog;
+        private DiscordChannel _leaveLog;
 
         public Logger(DiscordClient client)
         {
@@ -29,36 +30,14 @@ namespace DiscordBotTemplateNet7.Utility
             ulong logChannelId = 1194008427198943342;
             ulong logErrorId = 1194010406532939796;
             ulong joinLogId = 1194011404362055780;
+            ulong leaveLogId = 1194032202200141834;
 
             _logChannel = await _client.GetChannelAsync(logChannelId) as DiscordChannel;
             _errorLog = await _client.GetChannelAsync(logErrorId) as DiscordChannel;
             _joinLog = await _client.GetChannelAsync(joinLogId) as DiscordChannel;
+            _leaveLog = await _client.GetChannelAsync(leaveLogId) as DiscordChannel;
 
-            if (_logChannel == null || _errorLog == null || _joinLog == null)
-            {
-                var notFoundChannels = new List<string>();
-
-                if (_logChannel == null)
-                {
-                    notFoundChannels.Add($"Log channel with ID {logChannelId}");
-                }
-
-                if (_errorLog == null)
-                {
-                    notFoundChannels.Add($"Error log channel with ID {logErrorId}");
-                }
-
-                if (_joinLog == null)
-                {
-                    notFoundChannels.Add($"Error log channel with ID {joinLogId}");
-                }
-
-                ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Error: The following channel(s) were not found: ");
-                foreach (var channel in notFoundChannels)
-                {
-                    ConsoleColors.WriteLineWithColors($"[ ^4Logger ^0] [ ^1Error ^0] - {channel}");
-                }
-            }
+            // If not found dosent matter still crash.
 
         }
 
@@ -129,6 +108,49 @@ namespace DiscordBotTemplateNet7.Utility
             }
         }
 
+        public async Task LogLeaveAsync(DiscordGuild guild)
+        {
+            if (_logChannel != null)
+            {
+                var leaveEmbed = new DiscordEmbedBuilder
+                {
+                    Title = "Guild Left",
+                    Description = $"Left guild: {guild.Name}",
+                    Color = DiscordColor.Red
+                };
+
+                leaveEmbed.AddField("Owner", guild.Owner.Username, inline: true);
+                leaveEmbed.AddField("Member Count", guild.MemberCount.ToString(), inline: true);
+                leaveEmbed.AddField("Verification Level", guild.VerificationLevel.ToString(), inline: true);
+                leaveEmbed.AddField("Created At", guild.CreationTimestamp.ToString("dd/MM/yyyy HH:mm:ss"), inline: false);
+
+                await _logChannel.SendMessageAsync(embed: leaveEmbed);
+                await _leaveLog.SendMessageAsync(embed: leaveEmbed);
+            } else
+            {
+                ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Log channel not initialized.");
+            }
+        }
+        public async Task LogBotStartedAsync(string version)
+        {
+            if (_logChannel != null)
+            {
+                var botStartedEmbed = new DiscordEmbedBuilder
+                {
+                    Title = "Bot Started",
+                    Description = "The bot has started!",
+                    Color = DiscordColor.Green
+                };
+
+                botStartedEmbed.AddField("Timestamp", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
+                botStartedEmbed.AddField("Bot Version", version, inline: true);
+
+                await _logChannel.SendMessageAsync(embed: botStartedEmbed);
+            } else
+            {
+                ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Log channel not initialized.");
+            }
+        }
 
 
     }

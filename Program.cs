@@ -29,6 +29,7 @@ namespace DiscordBotTemplateNet7
 
         private static string token;
         private static string prefix;
+        private static string version;
 
         public static async Task Main(string[] args)
         {
@@ -44,12 +45,40 @@ namespace DiscordBotTemplateNet7
 
             Client.Ready += OnClientReady;
             Client.GuildCreated += onGuildCreated;
+            Client.GuildDeleted += onGuildRemoved;
 
             await Client.ConnectAsync();
             await Task.Delay(-1);
 
 
 
+        }
+
+        private static async Task onGuildRemoved(DiscordClient s, GuildDeleteEventArgs e)
+        {
+            DiscordGuild guild = e.Guild;
+            dbManager.OpenConnection();
+
+            MySqlCommand command = dbManager.CreateCommand(
+                "DELETE FROM discordguild WHERE guild_id = @GuildId"
+                );
+
+            command.Parameters.AddWithValue("@GuildId", guild.Id);
+
+            try
+            {
+                await command.ExecuteNonQueryAsync();
+            } catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                await _logger.LogErrorAsync(ex);
+            } finally
+            {
+                dbManager.CloseConnection();
+                await _logger.LogLeaveAsync(guild);
+            }
+
+            throw new NotImplementedException();
         }
 
         private static async Task onGuildCreated(DiscordClient s, GuildCreateEventArgs e)
@@ -87,7 +116,7 @@ namespace DiscordBotTemplateNet7
         private static async Task OnClientReady(DiscordClient sender, ReadyEventArgs e)
         {
             ConsoleColors.WriteLineWithColors("[ ^4Program ^0] [ ^2Boot ^0]: Client Started");
-            await _logger.LogAsync("Bot Started");
+            await _logger.LogBotStartedAsync(version);
         }
 
         private async Task RefreshLeaderboard(DiscordClient c)
@@ -171,6 +200,7 @@ namespace DiscordBotTemplateNet7
             await _config.ReadJSONAsync();
             token = _config.Token;
             prefix = _config.Prefix;
+            version = _config.Version;
 
         }
 

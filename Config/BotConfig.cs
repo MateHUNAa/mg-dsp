@@ -11,6 +11,7 @@ namespace DiscordBotTemplateNet7.Config
     {
         public string Token { get; set; }
         public string Prefix { get; set; }
+        public string Version {  get; set; }
 
         public async Task ReadJSONAsync()
         {
@@ -21,6 +22,7 @@ namespace DiscordBotTemplateNet7.Config
 
                 this.Token = obj.token;
                 this.Prefix = obj.prefix;
+                this.Version = obj.version;
             }
         }
     }
@@ -29,6 +31,7 @@ namespace DiscordBotTemplateNet7.Config
     {
         public string token { get; set; }
         public string prefix { get; set; }
+        public string version { get; set; }
     }
 }
 
