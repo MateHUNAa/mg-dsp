@@ -15,6 +15,8 @@ namespace DiscordBotTemplateNet7.Utility
         private DiscordChannel _errorLog;
         private DiscordChannel _joinLog;
         private DiscordChannel _leaveLog;
+        private DiscordChannel _setupLog;
+        private DiscordChannel _userRepoLog;
 
         public Logger(DiscordClient client)
         {
@@ -31,11 +33,15 @@ namespace DiscordBotTemplateNet7.Utility
             ulong logErrorId = 1194010406532939796;
             ulong joinLogId = 1194011404362055780;
             ulong leaveLogId = 1194032202200141834;
+            ulong setupLogId = 1194043062947684554;
+            ulong userrepo = 1194084445062447134;
 
-            _logChannel = await _client.GetChannelAsync(logChannelId) as DiscordChannel;
-            _errorLog = await _client.GetChannelAsync(logErrorId) as DiscordChannel;
-            _joinLog = await _client.GetChannelAsync(joinLogId) as DiscordChannel;
-            _leaveLog = await _client.GetChannelAsync(leaveLogId) as DiscordChannel;
+            _logChannel = await _client.GetChannelAsync(logChannelId);
+            _errorLog = await _client.GetChannelAsync(logErrorId);
+            _joinLog = await _client.GetChannelAsync(joinLogId);
+            _leaveLog = await _client.GetChannelAsync(leaveLogId);
+            _setupLog = await _client.GetChannelAsync(setupLogId);
+            _userRepoLog = await _client.GetChannelAsync(userrepo);
 
             // If not found dosent matter still crash.
 
@@ -61,8 +67,19 @@ namespace DiscordBotTemplateNet7.Utility
                 Color = DiscordColor.Red
             };
 
-            embed.AddField("StackTrace", $"```{ex.StackTrace}```");
+            // Split the stack trace into chunks
+            utility utility = new utility();
+            var stackTraceChunks = utility.SplitText(ex.StackTrace, 1024);
 
+            // Add each chunk of stack trace as a separate field
+            int fieldCount = 1;
+            foreach (var chunk in stackTraceChunks)
+            {
+                embed.AddField($"StackTrace Part {fieldCount}", $"```{chunk}```");
+                fieldCount++;
+            }
+
+            // Send the embeds with split stack trace to respective channels
             await _logChannel.SendMessageAsync(embed: embed);
             await _errorLog.SendMessageAsync(embed: embed);
         }
@@ -149,6 +166,49 @@ namespace DiscordBotTemplateNet7.Utility
             } else
             {
                 ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Log channel not initialized.");
+            }
+        }
+
+        public async Task LogEmbedAsync(DiscordEmbed embed)
+        {
+            if (_logChannel != null && _setupLog != null)
+            {
+                await _logChannel.SendMessageAsync(embed: embed);
+                await _setupLog.SendMessageAsync(embed: embed);
+            } else
+            {
+                ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Log channel not initialized.");
+            }
+        }
+
+
+        public async Task UserRepoLogAsync(DiscordUser user, DiscordGuild guild)
+        {
+            try
+            {
+                var embed = new DiscordEmbedBuilder
+                {
+                    Title = "User Repository Log",
+                    Color = DiscordColor.Green // Adjust color if needed
+                };
+
+                embed.AddField("User ID", user.Id.ToString());
+                embed.AddField("Username", user.Username);
+                embed.AddField("Guild ID", guild.Id.ToString());
+                embed.AddField("Guild Name", guild.Name);
+
+                if (_logChannel != null && _userRepoLog != null)
+                {
+                    await _logChannel.SendMessageAsync(embed: embed);
+                    await _userRepoLog.SendMessageAsync(embed: embed);
+                } else
+                {
+                    ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^1Error ^0] Log channel not initialized.");
+                }
+            } catch (Exception ex)
+            {
+                // Handle exceptions, if necessary
+                Console.WriteLine($"Error logging user repository event: {ex.Message}");
             }
         }
 

@@ -5,6 +5,19 @@ namespace DiscordBotTemplateNet7.Utility
 {
     public class utility
     {
+        public IEnumerable<string> SplitText(string text, int chunkSize)
+        {
+            for (int i = 0; i < text.Length; i += chunkSize)
+            {
+                if (i + chunkSize >= text.Length)
+                {
+                    yield return text.Substring(i);
+                } else
+                {
+                    yield return text.Substring(i, chunkSize);
+                }
+            }
+        }
 
         public bool TryParseDuration(string durationStr, out TimeSpan duration)
         {
