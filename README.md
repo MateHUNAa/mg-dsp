@@ -8,7 +8,7 @@ gm-dsp is a learning project aimed at exploring the functionalities of DSharpPlu
 The primary goal of this project is to create a multi-guild bot, allowing exploration and implementation of various features across different Discord guilds. It aims to understand handling multiple server functionalities, such as event management, commands, and interactions, within the Discord API.
 
 # Key Features:
-TODO
+- Advanced Ticket System
 
 
 
