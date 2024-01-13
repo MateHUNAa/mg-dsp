@@ -37,6 +37,9 @@ namespace DiscordBotTemplateNet7.Utility
                     case '2':
                         color = ConsoleColor.Green;
                         break;
+                    case '3':
+                        color = ConsoleColor.Magenta;
+                        break;
                 }
 
                 Console.ForegroundColor = color;

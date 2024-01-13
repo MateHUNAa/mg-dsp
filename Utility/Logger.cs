@@ -17,6 +17,7 @@ namespace DiscordBotTemplateNet7.Utility
         private DiscordChannel _leaveLog;
         private DiscordChannel _setupLog;
         private DiscordChannel _userRepoLog;
+        private DiscordChannel _webChannel;
 
         public Logger(DiscordClient client)
         {
@@ -24,7 +25,7 @@ namespace DiscordBotTemplateNet7.Utility
 
             InitializeLogChannelAsync().GetAwaiter().GetResult();
 
-            ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^2Info ^0] Logger Initialized.");
+            ConsoleColors.WriteLineWithColors("[ ^4Logger ^0] [ ^3Info ^0] Logger Initialized.");
         }
 
         private async Task InitializeLogChannelAsync()
@@ -35,6 +36,7 @@ namespace DiscordBotTemplateNet7.Utility
             ulong leaveLogId = 1194032202200141834;
             ulong setupLogId = 1194043062947684554;
             ulong userrepo = 1194084445062447134;
+            ulong webChannel = 1195719276687003759;
 
             _logChannel = await _client.GetChannelAsync(logChannelId);
             _errorLog = await _client.GetChannelAsync(logErrorId);
@@ -42,6 +44,7 @@ namespace DiscordBotTemplateNet7.Utility
             _leaveLog = await _client.GetChannelAsync(leaveLogId);
             _setupLog = await _client.GetChannelAsync(setupLogId);
             _userRepoLog = await _client.GetChannelAsync(userrepo);
+            _webChannel = await _client.GetChannelAsync(webChannel);
 
             // If not found dosent matter still crash.
 
@@ -181,6 +184,62 @@ namespace DiscordBotTemplateNet7.Utility
             }
         }
 
+
+        /**
+         * Channels:
+         * Global       :       _logChannel
+         * webHandler   :       _webChannel
+         * error        :       _errorLog
+         */
+        public async Task SendEmbedAsync(DiscordEmbed embed, string[] channels, Exception ex = null)
+        {
+            foreach (string channel in channels)
+            {
+                switch (channel.ToLower())
+                {
+                    case "global":
+                        await _logChannel.SendMessageAsync(embed: embed);
+                        break;
+                    case "webhandler":
+                        await _webChannel.SendMessageAsync(embed: embed);
+                        break;
+                    case "error":
+                        if (ex != null)
+                            await LogErrorAsync(ex);
+                        break;
+                    default:
+                        ConsoleColors.WriteLineWithColors($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        await _logChannel.SendMessageAsync($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        await _errorLog.SendMessageAsync($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        break;
+                }
+            }
+        }
+        public Task SendEmbed(DiscordEmbed embed, string[] channels, Exception ex = null)
+        {
+            foreach (string channel in channels)
+            {
+                switch (channel.ToLower())
+                {
+                    case "global":
+                        _logChannel.SendMessageAsync(embed: embed);
+                        break;
+                    case "webhandler":
+                        _webChannel.SendMessageAsync(embed: embed);
+                        break;
+                    case "error":
+                        if (ex != null)
+                            LogErrorAsync(ex);
+                        break;
+                    default:
+                        ConsoleColors.WriteLineWithColors($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        _logChannel.SendMessageAsync($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        _errorLog.SendMessageAsync($"[ ^4Logger ^0] [ ^1Error ^0] (SendEmbedAsync): Channel not found!\n{channel}");
+                        break;
+                }
+            }
+            return null;
+        }
 
         public async Task UserRepoLogAsync(DiscordUser user, DiscordGuild guild)
         {

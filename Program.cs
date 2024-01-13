@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Security;
 using System;
+using System.Net;
 using System.Net.WebSockets;
 
 namespace DiscordBotTemplateNet7
@@ -26,6 +27,7 @@ namespace DiscordBotTemplateNet7
         public static DiscordClient Client { get; private set; }
         public static CommandsNextExtension Commands { get; private set; }
         public static DatabaseManager dbManager { get; private set; }
+        public static WebServerHandler webHandler {  get; private set; }
 
         private static readonly string connectionString = "Server=localhost;Database=gm-ddp;Uid=root;";
         public static Logger _logger { get; private set; }
@@ -33,6 +35,8 @@ namespace DiscordBotTemplateNet7
         private static string token;
         private static string prefix;
         private static string version;
+
+        public static readonly bool userAgenLock = false;
 
         public static async Task Main(string[] args)
         {
@@ -96,8 +100,7 @@ namespace DiscordBotTemplateNet7
                             if (isUserExist)
                             {
                                 await ticket.SaveTicketToDatabaseAsync(Ticket);
-                            } 
-                            else
+                            } else
                             {
                                 await userRepo.SaveDiscordUserAsync(e.User, e.Guild);
                                 await ticket.SaveTicketToDatabaseAsync(Ticket);
@@ -397,6 +400,7 @@ namespace DiscordBotTemplateNet7
             ConfigureDiscordClient();
             RegisterCommandsAndInteractions();
             InitializeStuff();
+            InitializeWebServer();
 
         }
 
@@ -444,7 +448,7 @@ namespace DiscordBotTemplateNet7
 
             var slashConfig = Client.UseSlashCommands();
             slashConfig.RegisterCommands<Core>();
-            slashConfig.RegisterCommands<Ticket>(741304300319539223);
+            slashConfig.RegisterCommands<Ticket>();
         }
 
         private void InitializeStuff()
@@ -453,6 +457,30 @@ namespace DiscordBotTemplateNet7
             dbManager = new DatabaseManager(connectionString);
         }
 
+        private void InitializeWebServer()
+        {
+            string url = "http://localhost:8080/";
+            HttpListener listener = new HttpListener();
+            listener.Prefixes.Add(url);
+
+            ConsoleColors.WriteLineWithColors($"[ ^4Program ^0] [ ^2WebListener ^0] Listening on ^2{url}");
+
+            listener.Start();
+
+            webHandler = new WebServerHandler();
+
+            Thread thread = new Thread(() =>
+            {
+                while (true)
+                {
+                    HttpListenerContext context = listener.GetContext();
+                    webHandler.ProcessRequest(context);
+                }
+            });
+
+            thread.Start();
+
+        }
 
     }
 }

@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿using DSharpPlus.Entities;
+using MySql.Data.MySqlClient;
 using System.Data;
 
 namespace DiscordBotTemplateNet7.Utility
@@ -13,6 +14,18 @@ namespace DiscordBotTemplateNet7.Utility
         {
             _connectionString = connectionString;
             _connection = new MySqlConnection(_connectionString);
+            ConsoleColors.WriteLineWithColors("[ ^4DatabaseManager ^0] [ ^3Info ^0] Database Connected!");
+            string[] channels =
+            {
+                "global"
+            };
+            DiscordEmbedBuilder embed = new DiscordEmbedBuilder
+            {
+                Title = "Database Manager",
+                Description = "The DatabaseManager module establishes a stable connection with the database.",
+                Color = DiscordColor.Green
+            };
+            Program._logger.SendEmbed(embed, channels);
         }
 
         public void OpenConnection()
