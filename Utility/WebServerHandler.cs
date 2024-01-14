@@ -39,7 +39,7 @@ namespace DiscordBotTemplateNet7.Utility
             string[] segments = request.Url.AbsolutePath.Split('/');
             string responseString = "";
             List<string> channels = new List<string> { "webhandler", "global" };
-
+            string[] channelsArray;
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder
             {
                 Title = "Web Server Handler",
@@ -62,24 +62,29 @@ namespace DiscordBotTemplateNet7.Utility
                 {
                     embed.Color = DiscordColor.IndianRed;
                     embed.Description = $"Processing HTTP Request - ERROR\nInvalid UserAgent";
+                    channelsArray = channels.ToArray();
+                    await Program._logger.SendEmbedAsync(embed, channelsArray);
+                    response.OutputStream.Close();
+                    return;
                 }
             }
 
-            if (agent == "$MateHUN/Handler")
-                switch (segments[1].ToLower())
-                {
-                    case "savedata":
-                        embed.AddField("Action", "Save Data");
-                        break;
-                    default:
-                        embed.AddField("Action", "Unknown");
-                        break;
-                }
+
+            switch (segments[1].ToLower())
+            {
+                case "savedata":
+                    embed.AddField("Action", "Save Data");
+                    break;
+                default:
+                    embed.AddField("Action", "Unknown");
+                    response.OutputStream.Close();
+                    break;
+            }
 
             responseString = "Hello, world!";
 
 
-            string[] channelsArray = channels.ToArray();
+           channelsArray = channels.ToArray();
             await Program._logger.SendEmbedAsync(embed, channelsArray);
 
 
