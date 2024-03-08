@@ -10,9 +10,9 @@ namespace DiscordBotTemplateNet7.Slash_Commands
     public class Core : ApplicationCommandModule
     {
 
-        private readonly string connectionString = "server=mysql8.srkhost.eu;user=u32867_NeG3ux6F7f;password=a@8Mm@6!c3Fo2KnDjkoJP3iQ;database=s32867_licensev1";
+        private readonly string connectionString = "";
 
-        private readonly string connectionFivemServer = "server=localhost;user=root;database=fivemserver";
+        private readonly string connectionFivemServer = "";
 
         [SlashCommand("registerResource", "Register a resource")]
         public async Task RegisterResource(InteractionContext ctx,
