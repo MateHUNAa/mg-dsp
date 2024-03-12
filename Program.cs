@@ -1,23 +1,22 @@
 ﻿using DiscordBotTemplateNet7.Commands;
 using DiscordBotTemplateNet7.Config;
+using DiscordBotTemplateNet7.EventSystem;
 using DiscordBotTemplateNet7.Repositories;
 using DiscordBotTemplateNet7.Slash_Commands;
 using DiscordBotTemplateNet7.Utility;
 using DiscordBotTemplateNet7.Valami;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.CommandsNext.Exceptions;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
+using mh_Auth;
 using MySql.Data.MySqlClient;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Org.BouncyCastle.Security;
-using System;
 using System.Net;
-using System.Net.WebSockets;
 
 namespace DiscordBotTemplateNet7
 {
@@ -27,22 +26,26 @@ namespace DiscordBotTemplateNet7
         public static DiscordClient Client { get; private set; }
         public static CommandsNextExtension Commands { get; private set; }
         public static DatabaseManager dbManager { get; private set; }
-        public static WebServerHandler webHandler {  get; private set; }
+        public static WebServerHandler webHandler { get; private set; }
+        public static EventPublisher publisher { get; private set; }
 
-        private static readonly string connectionString = "Server=localhost;Database=gm-ddp;Uid=root;";
+        private static readonly string connectionString = "Server=localhost;Database=hwid_lic;Uid=matehun;Password=admin123";
         public static Logger _logger { get; private set; }
+
+        private utility u = new utility();
 
         private static string token;
         private static string prefix;
         private static string version;
+        private static string license;
 
         public static readonly bool userAgenLock = false;
 
+        public static Auth a { get; private set; }
+        public static Auth.Utility au { get; private set; }
+
         public static async Task Main(string[] args)
         {
-
-
-
             var programInstance = new Program();
             await programInstance.InitializeAsync();
 
@@ -57,8 +60,6 @@ namespace DiscordBotTemplateNet7
 
             await Client.ConnectAsync();
             await Task.Delay(-1);
-
-
 
         }
 
@@ -402,6 +403,9 @@ namespace DiscordBotTemplateNet7
             InitializeStuff();
             InitializeWebServer();
 
+            Thread thread = new Thread(new ThreadStart(checkingConnection)) { IsBackground = true };
+            thread.Start();
+
         }
 
         private async Task LoadBotConfigurationsAsync()
@@ -411,6 +415,7 @@ namespace DiscordBotTemplateNet7
             token = _config.Token;
             prefix = _config.Prefix;
             version = _config.Version;
+            license = _config.license;
 
         }
 
@@ -449,12 +454,43 @@ namespace DiscordBotTemplateNet7
             var slashConfig = Client.UseSlashCommands();
             slashConfig.RegisterCommands<Core>();
             slashConfig.RegisterCommands<Ticket>();
+            slashConfig.RegisterCommands<FivemProfile>();
+            slashConfig.RegisterCommands<Lacskak>(758415911958216745);
+
         }
 
         private void InitializeStuff()
         {
             _logger = new Logger(Client);
             dbManager = new DatabaseManager(connectionString);
+            publisher = new EventPublisher();
+
+            MySqlConnection conn = new MySqlConnection(connectionString);
+            a = new Auth(conn);
+            au = new Auth.Utility();
+
+
+        }
+
+
+        private static async void checkingConnection()
+        {
+            while (true)
+            {
+                string HWID = a.GetHWID();
+                string IP = await au.GetPublicIpAddress();
+
+                if (a.Authenticate(license, HWID, IP))
+                {
+                    ConsoleColors.WriteLineWithColors("[ ^4License^0 ] [ ^3INFO ^0] Key is valid !");
+                } else
+                {
+                    ConsoleColors.WriteLineWithColors("[ ^4License^0 ] [ ^1ERROR ^0] Key is expired or not valid!");
+                    Environment.Exit(0000256600 + 176);
+                }
+
+                await Task.Delay(15000);
+            }
         }
 
         private void InitializeWebServer()

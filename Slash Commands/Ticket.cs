@@ -117,15 +117,20 @@ namespace DiscordBotTemplateNet7.Slash_Commands
             try
             {
                 await dbm.OpenConnectionAsync();
+
                 embed = new DiscordEmbedBuilder
                 {
                     Title = "Ticket System",
                     Color = DiscordColor.Green,
-                    Description = $"Ticket System initialized in {context.Guild.Name}"
+                    Description = $"Ticket System initialized in {context.Guild.Name}",
+                  
                 };
+
                 embed.AddField("GuildId", context.Guild.Id.ToString());
                 embed.AddField("GuildName", context.Guild.Name);
                 embed.AddField("TotalMembers", context.Guild.MemberCount.ToString());
+
+
                 await Program._logger.LogEmbedAsync(embed);
 
                 embed = new DiscordEmbedBuilder

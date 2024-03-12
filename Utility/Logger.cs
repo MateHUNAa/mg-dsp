@@ -10,7 +10,7 @@ namespace DiscordBotTemplateNet7.Utility
 {
     public class Logger
     {
-        private DiscordClient _client;
+        private DiscordClient  _client;
         private DiscordChannel _logChannel;
         private DiscordChannel _errorLog;
         private DiscordChannel _joinLog;

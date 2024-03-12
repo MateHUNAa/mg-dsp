@@ -10,6 +10,7 @@ namespace DiscordBotTemplateNet7.Utility
     {
         public static void WriteLineWithColors(string message)
         {
+
             var parts = message.Split('^');
             foreach (var part in parts)
             {
