@@ -9,6 +9,9 @@ The primary goal of this project is to create a multi-guild bot, allowing explor
 
 # Key Features:
 - Advanced Ticket System
+- HWID, License, IP Lock
+- Fun commands
+- WebServer Backed Comminicate
 
 
 
