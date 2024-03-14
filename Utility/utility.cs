@@ -33,6 +33,8 @@ namespace DiscordBotTemplateNet7.Utility
             return false;
         }
 
+
+        
         public string GenerateRandomBase64Key(int length)
         {
 

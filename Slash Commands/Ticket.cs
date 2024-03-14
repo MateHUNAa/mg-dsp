@@ -123,7 +123,7 @@ namespace DiscordBotTemplateNet7.Slash_Commands
                     Title = "Ticket System",
                     Color = DiscordColor.Green,
                     Description = $"Ticket System initialized in {context.Guild.Name}",
-                  
+
                 };
 
                 embed.AddField("GuildId", context.Guild.Id.ToString());

@@ -72,7 +72,7 @@ namespace DiscordBotTemplateNet7.Utility
 
             // Split the stack trace into chunks
             utility utility = new utility();
-            var stackTraceChunks = utility.SplitText(ex.StackTrace, 1024);
+            var stackTraceChunks = utility.SplitText(ex.StackTrace, 1020);
 
             // Add each chunk of stack trace as a separate field
             int fieldCount = 1;

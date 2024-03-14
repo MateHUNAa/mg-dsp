@@ -7,8 +7,6 @@ using DiscordBotTemplateNet7.Utility;
 using DiscordBotTemplateNet7.Valami;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.CommandsNext.Exceptions;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
@@ -401,10 +399,12 @@ namespace DiscordBotTemplateNet7
             ConfigureDiscordClient();
             RegisterCommandsAndInteractions();
             InitializeStuff();
-            InitializeWebServer();
+            //InitializeWebServer();
 
+
+            // License Key Check
             Thread thread = new Thread(new ThreadStart(checkingConnection)) { IsBackground = true };
-            thread.Start();
+            //thread.Start();
 
         }
 
@@ -477,6 +477,7 @@ namespace DiscordBotTemplateNet7
         {
             while (true)
             {
+
                 string HWID = a.GetHWID();
                 string IP = await au.GetPublicIpAddress();
 
