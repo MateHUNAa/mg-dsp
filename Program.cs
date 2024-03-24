@@ -13,6 +13,7 @@ using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using mh_Auth;
+using mh_Auth.Interface;
 using MySql.Data.MySqlClient;
 using System.Net;
 
@@ -36,6 +37,7 @@ namespace DiscordBotTemplateNet7
         private static string prefix;
         private static string version;
         private static string license;
+
 
         public static readonly bool userAgenLock = false;
 
@@ -404,7 +406,7 @@ namespace DiscordBotTemplateNet7
 
             // License Key Check
             Thread thread = new Thread(new ThreadStart(checkingConnection)) { IsBackground = true };
-            //thread.Start();
+            thread.Start();
 
         }
 
@@ -478,10 +480,11 @@ namespace DiscordBotTemplateNet7
             while (true)
             {
 
-                string HWID = a.GetHWID();
+                string HWID = Auth.GetHWID();
                 string IP = await au.GetPublicIpAddress();
-
-                if (a.Authenticate(license, HWID, IP))
+                IUserInputHandler handler = new ConsoleInputHandler();
+                
+                if (await a.Authenticate(license, HWID, IP, handler))
                 {
                     ConsoleColors.WriteLineWithColors("[ ^4License^0 ] [ ^3INFO ^0] Key is valid !");
                 } else

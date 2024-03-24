@@ -273,16 +273,48 @@ namespace DiscordBotTemplateNet7.Slash_Commands
 
             List<ulong> channelIds = await GetTicketChannelsForGuildAsync(guild);
 
-            string deleteSetupQuery = @"
-    DELETE FROM ticketsystem 
-    WHERE GuildId = @GuildId";
-            string deleteTicketsQuery = @"
-    DELETE FROM ticket 
-    WHERE GuildID = @GuildId";
+            string deleteSetupQuery = @"DELETE FROM ticketsystem WHERE GuildId = @GuildId";
+            string deleteTicketsQuery = @"DELETE FROM ticket WHERE GuildID = @GuildId";
 
             try
             {
                 await dbManager.OpenConnectionAsync();
+                using (MySqlCommand command = dbManager.CreateCommand("SELECT ChannelId, MessageId FROM ticketsystem WHERE GuildId = @GuildId"))
+                {
+                    ulong channelId;
+                    ulong messageId;
+
+                    command.Parameters.AddWithValue("@GuildId", guild.Id);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            channelId = Convert.ToUInt64(reader["ChannelId"]);
+                            messageId = Convert.ToUInt64(reader["MessageId"]);
+
+                            try
+                            {
+                                DiscordChannel channel = guild.Channels[channelId];
+                                if (channel != null)
+                                {
+                                    DiscordMessage message = await channel.GetMessageAsync(messageId);
+                                    if (message != null)
+                                    {
+                                        await message.DeleteAsync();
+                                    }
+                                }
+                            } catch (Exception ex)
+                            {
+                                ConsoleColors.WriteLineWithColors($"[ ^4Ticket ^0] [ ^1Error ^0] Error while delete ticket message ! {ex.Message}");
+                            }
+                        } else
+                        {
+                            ConsoleColors.WriteLineWithColors($"[ ^4Ticket ^0] [ ^1Error ^0] Cannot found the ticket Channel / Message while deleting !");
+                        }
+                    }
+                }
+
 
                 // Delete ticket system setup
                 using (MySqlCommand setupCommand = dbManager.CreateCommand(deleteSetupQuery))
@@ -322,6 +354,7 @@ namespace DiscordBotTemplateNet7.Slash_Commands
             {
                 await dbManager.CloseConnectionAsync();
             }
+
         }
 
         private async Task<List<ulong>> GetTicketChannelsForGuildAsync(DiscordGuild guild)
