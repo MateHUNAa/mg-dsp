@@ -58,7 +58,6 @@ namespace DiscordBotTemplateNet7.Slash_Commands
         }
 
         //end
-
         [SlashCommand("setvip", "Set The Player Vip Level")]
         [RequireRoles(RoleCheckMode.MatchIds, 930120114592948315)]
         public async Task SetVIP(InteractionContext context,

@@ -15,6 +15,8 @@ using DSharpPlus.SlashCommands;
 using mh_Auth;
 using mh_Auth.Interface;
 using MySql.Data.MySqlClient;
+using MySqlX.XDevAPI;
+using System.Data;
 using System.Net;
 
 namespace DiscordBotTemplateNet7
@@ -259,6 +261,16 @@ namespace DiscordBotTemplateNet7
                     }
                     break;
 
+                case "previus-page":
+                    await e.Interaction.DeferAsync(true);
+                    await e.Interaction.DeleteOriginalResponseAsync();
+                    break;
+
+                case "next-page":
+                    await e.Interaction.DeferAsync(true);
+                    await e.Interaction.DeleteOriginalResponseAsync();
+                    break;
+
                 default:
                     break;
             }
@@ -330,69 +342,91 @@ namespace DiscordBotTemplateNet7
             await _logger.LogBotStartedAsync(version);
         }
 
-        private async Task RefreshLeaderboard(DiscordClient c)
+        private async Task StartLeaderboardUpdateAsync(DiscordClient c)
         {
-            ulong guildId = 741304300319539223;
-            ulong channelId = 1187968495485452428;
-            ulong errorId = 1187959648897208340;
-
-            DiscordGuild guild = c.Guilds[guildId];
-
-            string connectionString = "server=localhost;user=root;database=fivemserver";
-
-            MySqlConnection connection = new MySqlConnection(connectionString);
+            var dbm = Program.dbManager;
 
             try
             {
-                connection.Open();
+                await dbm.OpenConnectionAsync();
 
+                var command = dbm.CreateCommand("SELECT * FROM `leaderboard`");
+                using var reader = await command.ExecuteReaderAsync();
+
+                var guilds = new List<(DiscordGuild Guild, ulong MessageId, ulong ChannelId)>();
+
+                while (await reader.ReadAsync())
+                {
+                    var guildId = reader.GetInt64("guildid");
+                    var channelId = reader.GetInt64("channelId");
+                    var messageId = reader.GetInt64("messageId");
+
+                    DiscordGuild guild = await Client.GetGuildAsync((ulong)guildId);
+                    guilds.Add((guild, (ulong)messageId, (ulong)channelId));
+
+                }
+
+                foreach (var (guild, messageId, channelId) in guilds)
+                {
+                    await RefreshLeaderboardAsync(c, guild, messageId, channelId);
+                }
+            } catch (Exception ex)
+            {
+                await Program._logger.LogErrorAsync(ex);
+            } finally
+            {
+                await dbm.CloseConnectionAsync();
+            }
+        }
+
+        private async Task RefreshLeaderboardAsync(DiscordClient client, DiscordGuild guild, ulong messageId, ulong channelId)
+        {
+            var dbm = Program.dbManager;
+
+            try
+            {
                 string query = "SELECT * FROM `mate_kd` ORDER BY kills DESC LIMIT 10";
-                MySqlCommand cmd = new MySqlCommand(query, connection);
+                using var reader = await dbm.ExecuteReaderAsync(query);
 
-                MySqlDataReader reader = cmd.ExecuteReader();
-
-                DiscordEmbedBuilder embedBuilder = new DiscordEmbedBuilder()
+                var embedBuilder = new DiscordEmbedBuilder()
                     .WithTitle("Top 10 Users! Order by kills")
-                    .WithColor(DiscordColor.Gold);
+                    .WithColor(DiscordColor.Gold)
+                    .WithFooter($"Last update - {DateTime.UtcNow.ToString("HH:mm:ss")} UTC")
+                    .WithTimestamp(DateTime.UtcNow);
 
-                while (reader.Read())
+
+                while (await reader.ReadAsync())
                 {
                     int kills = reader.GetInt32("kills");
                     int deaths = reader.GetInt32("deaths");
                     int headshot = reader.GetInt32("headshot");
-                    ulong discordId = reader.GetUInt64("discord_id");
-
-                    DiscordMember member = await guild.GetMemberAsync(discordId, true);
-                    string username = member?.Username ?? "User not Found";
+                    string username = reader.GetString("player_name");
 
                     embedBuilder.AddField($"User: {username}", $"Kills: {kills}, Deaths: {deaths}, Headshots: {headshot}");
+
                 }
 
-                reader.Close();
-
-                DiscordChannel channel = await Client.GetChannelAsync(channelId);
-                if (channel != null && channel is DiscordChannel textChannel)
+                var channel = guild.GetChannel(channelId) as DiscordChannel;
+                if (channel != null)
                 {
-                    var messages = await textChannel.GetMessagesAsync();
+                    var messages = await channel.GetMessagesAsync();
                     foreach (var message in messages)
                     {
-                        await textChannel.DeleteMessageAsync(message);
+                        await channel.DeleteMessageAsync(message);
                     }
-                    await textChannel.SendMessageAsync(embed: embedBuilder.Build());
+                    await channel.SendMessageAsync(embed: embedBuilder.Build());
+                } else
+                {
+                    Console.Write($"Channel with ID {channelId} not found in guild {guild.Name}.");
                 }
-
-
             } catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                DiscordChannel textChannel = await Client.GetChannelAsync(errorId);
-                await textChannel.SendMessageAsync("[ERROR]: " + ex.Message);
-
-            } finally
-            {
-                connection.Close();
+                await Program._logger.LogErrorAsync(ex);
             }
         }
+
+
+
 
         public async Task InitializeAsync()
         {
@@ -406,8 +440,20 @@ namespace DiscordBotTemplateNet7
 
             // License Key Check
             Thread thread = new Thread(new ThreadStart(checkingConnection)) { IsBackground = true };
-            thread.Start();
+            //thread.Start();
 
+            Thread tLeaderboard = new Thread(new ThreadStart(t_function_leaderboard)) { IsBackground = true };
+            tLeaderboard.Start();
+        }
+
+
+        private async void t_function_leaderboard()
+        {
+            while (true)
+            {
+                await StartLeaderboardUpdateAsync(Client);
+                await Task.Delay(30000);
+            }
         }
 
         private async Task LoadBotConfigurationsAsync()
@@ -458,6 +504,7 @@ namespace DiscordBotTemplateNet7
             slashConfig.RegisterCommands<Ticket>();
             slashConfig.RegisterCommands<FivemProfile>();
             slashConfig.RegisterCommands<Lacskak>(758415911958216745);
+            slashConfig.RegisterCommands<Rimedm>(741304300319539223);
 
         }
 
@@ -483,7 +530,7 @@ namespace DiscordBotTemplateNet7
                 string HWID = Auth.GetHWID();
                 string IP = await au.GetPublicIpAddress();
                 IUserInputHandler handler = new ConsoleInputHandler();
-                
+
                 if (await a.Authenticate(license, HWID, IP, handler))
                 {
                     ConsoleColors.WriteLineWithColors("[ ^4License^0 ] [ ^3INFO ^0] Key is valid !");

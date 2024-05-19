@@ -149,6 +149,8 @@ namespace DiscordBotTemplateNet7.Slash_Commands
                     Color = DiscordColor.Green
                 };
 
+
+
                 var row = new DiscordComponent[]
                     {
                     new DiscordButtonComponent(ButtonStyle.Primary, "tamogatas", "❤ Tamogatas"),
