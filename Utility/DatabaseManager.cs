@@ -7,7 +7,7 @@ namespace DiscordBotTemplateNet7.Utility
 
     public class DatabaseManager
     {
-        private MySqlConnection _connection;
+        public MySqlConnection _connection;
         private string _connectionString;
 
         public DatabaseManager(string connectionString)
@@ -71,24 +71,50 @@ namespace DiscordBotTemplateNet7.Utility
         {
             MySqlConnection connection = new MySqlConnection(_connectionString);
             MySqlCommand command = new MySqlCommand(query, connection);
-            MySqlDataReader reader = null;
 
             try
             {
                 await connection.OpenAsync();
-                reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                MySqlDataReader reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 return reader;
             } catch (Exception ex)
             {
                 ConsoleColors.WriteLineWithColors($"[ ^4DatabaseManager ^0] [ ^1Error ^0] {ex}");
                 await Program._logger.LogErrorAsync(ex);
-                reader?.Dispose(); // Ensure the reader is disposed in case of an exception
-                connection.Close(); // Manually close the connection
+                connection.Close(); // Manually close the connection in case of an exception
                 return null;
             }
         }
 
 
+        public async Task<MySqlDataReader> ExecuteReaderWithParametersAsync(string query, Dictionary<string, object> parameters)
+        {
+            MySqlConnection connection = new MySqlConnection(_connectionString);
+            MySqlCommand command = new MySqlCommand(query, connection);
+
+            if (parameters != null)
+            {
+                foreach (var parameter in parameters)
+                {
+                    Console.WriteLine(parameter.Key);
+                    command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                }
+                parameters.Clear();
+            }
+
+            try
+            {
+                await connection.OpenAsync();
+                MySqlDataReader reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                return reader;
+            } catch (Exception ex)
+            {
+                ConsoleColors.WriteLineWithColors($"[ ^4DatabaseManager ^0] [ ^1Error ^0] {ex}");
+                await Program._logger.LogErrorAsync(ex);
+                connection.Close(); // Manually close the connection in case of an exception
+                return null;
+            } 
+        }
 
     }
 }

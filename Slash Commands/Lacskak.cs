@@ -21,7 +21,6 @@ namespace DiscordBotTemplateNet7.Slash_Commands
             ulong[] blackListedUserIds =
             {
                 575342593630797825, // MateHUN
-                458639461211832323, // Zador
             };
 
             DiscordGuild guild = context.Guild;

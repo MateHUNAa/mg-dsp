@@ -17,6 +17,7 @@ using mh_Auth.Interface;
 using MySql.Data.MySqlClient;
 using MySqlX.XDevAPI;
 using System.Data;
+using System.Linq.Expressions;
 using System.Net;
 
 namespace DiscordBotTemplateNet7
@@ -342,6 +343,118 @@ namespace DiscordBotTemplateNet7
             await _logger.LogBotStartedAsync(version);
         }
 
+        private async Task CheckExpiredVIPStatus(DiscordClient client)
+        {
+#if DEBUG
+            ConsoleColors.WriteLineWithColors("[ ^4ExpiredVIP ^0]: Checking for expired VIP's");
+#endif
+
+            Rimedm rime = new Rimedm();
+            try
+            {
+                await dbManager.OpenConnectionAsync();
+
+                MySqlCommand cmd = dbManager.CreateCommand("SELECT discordId, roleId, experiation_date FROM `mate_vipsystem`");
+                ulong roleId = 0;
+                ulong discordId = 0;
+                DateTime expirationDate = DateTime.MinValue;
+                using (MySqlDataReader reader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        discordId = reader.GetUInt64("discordId");
+                        roleId = reader.GetUInt64("roleId");
+                        expirationDate = reader.GetDateTime("experiation_date");
+                    }
+
+                }
+
+                if (roleId != 0 && expirationDate != DateTime.MinValue)
+                {
+                    ulong guildId = 0;
+                    try
+                    {
+                        await dbManager.OpenConnectionAsync();
+                        MySqlCommand cmd2 = dbManager.CreateCommand("SELECT guildId FROM `vip_roles` WHERE roleId = @roleId");
+                        cmd2.Parameters.AddWithValue("@roleId", roleId);
+
+                        using (MySqlDataReader reader2 = await cmd2.ExecuteReaderAsync(CommandBehavior.CloseConnection))
+                        {
+                            while (await reader2.ReadAsync())
+                            {
+                                guildId = reader2.GetUInt64("guildId");
+                            }
+                        }
+                    } catch (Exception ex)
+                    {
+                        await _logger.LogErrorAsync(ex);
+                    } finally
+                    {
+                        await dbManager.CloseConnectionAsync();
+                    }
+
+
+                    if (DateTime.UtcNow > expirationDate)
+                    {
+                        // Expired VIP logic
+                        if (guildId != 0)
+                        {
+                            DiscordGuild guild = await Client.GetGuildAsync(guildId);
+                            DiscordUser user = await guild.GetMemberAsync(discordId);
+                            if (user != null)
+                            {
+                                DiscordRole vipRole = await rime.GetUserVIPRole(user, guild);
+                                if (vipRole != null)
+                                {
+                                    try
+                                    {
+                                        await dbManager.OpenConnectionAsync();
+                                        DiscordMember member = await guild.GetMemberAsync(user.Id);
+                                        await member.RevokeRoleAsync(vipRole);
+
+                                        MySqlCommand deleteVIP = dbManager.CreateCommand("DELETE FROM `mate_vipsystem` WHERE discordId = @discordId");
+                                        deleteVIP.Parameters.AddWithValue("@discordId", discordId);
+                                        await deleteVIP.ExecuteNonQueryAsync();
+
+                                        DiscordChannel channel = guild.Channels.Values.FirstOrDefault(ch => ch.Name.Equals("expired-vips", StringComparison.OrdinalIgnoreCase));
+
+                                        if (channel == null)
+                                        {
+                                            channel = await guild.CreateChannelAsync("expired-vips", ChannelType.Text);
+                                        }
+
+                                        DiscordEmbedBuilder embed = new DiscordEmbedBuilder
+                                        {
+                                            Title = "Rime VIP",
+                                            Description = $"{user.Mention} VIP status was expired !",
+                                            Color = DiscordColor.Aquamarine,
+                                            Timestamp = DateTime.UtcNow
+                                        };
+
+                                        await channel.SendMessageAsync(embed: embed);
+                                    } catch (Exception ex)
+                                    {
+                                        await _logger.LogErrorAsync(ex);
+                                    } finally
+                                    {
+                                        await dbManager.CloseConnectionAsync();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ex)
+            {
+                await _logger.LogErrorAsync(ex);
+            } finally
+            {
+                await dbManager.CloseConnectionAsync();
+            }
+        }
+
+
+
         private async Task StartLeaderboardUpdateAsync(DiscordClient c)
         {
             var dbm = Program.dbManager;
@@ -366,13 +479,15 @@ namespace DiscordBotTemplateNet7
 
                 }
 
+                await reader.CloseAsync();
+
                 foreach (var (guild, messageId, channelId) in guilds)
                 {
                     await RefreshLeaderboardAsync(c, guild, messageId, channelId);
                 }
             } catch (Exception ex)
             {
-                await Program._logger.LogErrorAsync(ex);
+                Console.WriteLine(ex.ToString());
             } finally
             {
                 await dbm.CloseConnectionAsync();
@@ -442,16 +557,18 @@ namespace DiscordBotTemplateNet7
             Thread thread = new Thread(new ThreadStart(checkingConnection)) { IsBackground = true };
             //thread.Start();
 
-            Thread tLeaderboard = new Thread(new ThreadStart(t_function_leaderboard)) { IsBackground = true };
+            Thread tLeaderboard = new Thread(new ThreadStart(delayedTasks)) { IsBackground = true };
             tLeaderboard.Start();
         }
 
 
-        private async void t_function_leaderboard()
+
+        private async void delayedTasks()
         {
             while (true)
             {
                 await StartLeaderboardUpdateAsync(Client);
+                await CheckExpiredVIPStatus(Client);
                 await Task.Delay(30000);
             }
         }
@@ -503,7 +620,7 @@ namespace DiscordBotTemplateNet7
             slashConfig.RegisterCommands<Core>();
             slashConfig.RegisterCommands<Ticket>();
             slashConfig.RegisterCommands<FivemProfile>();
-            slashConfig.RegisterCommands<Lacskak>(758415911958216745);
+            slashConfig.RegisterCommands<Lacskak>(1221813069634732042);
             slashConfig.RegisterCommands<Rimedm>(741304300319539223);
 
         }
