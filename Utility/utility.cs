@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using DSharpPlus;
+using DSharpPlus.Entities;
+using System.Globalization;
 using System.Security.Cryptography;
 
 namespace DiscordBotTemplateNet7.Utility
@@ -34,7 +36,7 @@ namespace DiscordBotTemplateNet7.Utility
         }
 
 
-        
+
         public string GenerateRandomBase64Key(int length)
         {
 
@@ -59,6 +61,30 @@ namespace DiscordBotTemplateNet7.Utility
             }
 
             return base64String.Substring(0, length); // Return only the requested length
+        }
+        public (bool hasDangerous, Permissions? dangerousPermission) HasDangerousPermissions(DiscordRole role)
+        {
+            Permissions[] dangerousPermissions =
+            {
+                Permissions.Administrator,
+                Permissions.ManageChannels,
+                Permissions.ManageGuild,
+                Permissions.ManageRoles,
+                Permissions.KickMembers,
+                Permissions.BanMembers,
+                Permissions.ViewAuditLog,
+                Permissions.ModerateMembers,
+                Permissions.ManageMessages,
+            };
+            foreach (Permissions permission in dangerousPermissions)
+            {
+                if (role.Permissions.HasFlag(permission))
+                {
+
+                    return (true, permission);
+                }
+            }
+            return (false, Permissions.None);
         }
     }
 }

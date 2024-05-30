@@ -60,10 +60,37 @@ namespace DiscordBotTemplateNet7
             Client.GuildCreated += onGuildCreated;
             Client.GuildDeleted += onGuildRemoved;
             Client.ComponentInteractionCreated += onInteractionExecuted;
+            Client.GuildRoleDeleted += onRoleDeleted;
 
             await Client.ConnectAsync();
             await Task.Delay(-1);
 
+        }
+
+        private static async Task onRoleDeleted(DiscordClient sender, GuildRoleDeleteEventArgs e)
+        {
+            DiscordGuild guild = e.Guild;
+            DiscordRole deletedRole = e.Role;
+            VIP vip = new VIP();
+
+            var (isVip, viplevel) = await vip.isRoleVIP(deletedRole, guild.Id);
+            var dbm = dbManager;
+
+            if (isVip)
+            {
+                DiscordUser[] users = await vip.GetRoleUsers(deletedRole.Id, guild);
+                if (users != null)
+                {
+                    foreach (var user in users)
+                    {
+                        DateTime userExpire = await vip.GetUserExpirationDate(user.Id);
+                        if (userExpire != DateTime.MinValue)
+                        {
+                            await vip.RevokeVIP(guild, user, deletedRole, userExpire);
+                        }
+                    }
+                }
+            }
         }
 
         private static async Task onInteractionExecuted(DiscordClient s, ComponentInteractionCreateEventArgs e)
@@ -349,7 +376,7 @@ namespace DiscordBotTemplateNet7
             ConsoleColors.WriteLineWithColors("[ ^4ExpiredVIP ^0]: Checking for expired VIP's");
 #endif
 
-            Rimedm rime = new Rimedm();
+            VIP vip = new VIP();
             try
             {
                 await dbManager.OpenConnectionAsync();
@@ -396,14 +423,13 @@ namespace DiscordBotTemplateNet7
 
                     if (DateTime.UtcNow > expirationDate)
                     {
-                        // Expired VIP logic
                         if (guildId != 0)
                         {
                             DiscordGuild guild = await Client.GetGuildAsync(guildId);
                             DiscordUser user = await guild.GetMemberAsync(discordId);
                             if (user != null)
                             {
-                                DiscordRole vipRole = await rime.GetUserVIPRole(user, guild);
+                                DiscordRole vipRole = await vip.GetUserVIPRole(user, guild);
                                 if (vipRole != null)
                                 {
                                     try
@@ -622,6 +648,7 @@ namespace DiscordBotTemplateNet7
             slashConfig.RegisterCommands<FivemProfile>();
             slashConfig.RegisterCommands<Lacskak>(1221813069634732042);
             slashConfig.RegisterCommands<Rimedm>(741304300319539223);
+            slashConfig.RegisterCommands<VIP>();
 
         }
 
